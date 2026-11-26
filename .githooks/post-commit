@@ -1,0 +1,13 @@
+#!/bin/sh
+# Depois de cada commit, em segundo plano: (1) copia de seguranca da pasta do projeto no OneDrive (sem segredos), (2) .bundle do
+# repositorio na pasta configurada e (3) testes. O resultado dos testes fica em Entregas/ci/ultimo.txt. Nao trava o commit.
+# Para desligar: git config --local presenca.hookDesligado 1
+[ "$(git config --local --get presenca.hookDesligado)" = "1" ] && exit 0
+RAIZ="$(git rev-parse --show-toplevel)"
+(
+  (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "$RAIZ/Ferramentas/Backup-Pasta.ps1" -Silencioso -PularSeRecenteMin 10
+    powershell -NoProfile -ExecutionPolicy Bypass -File "$RAIZ/Ferramentas/Backup-Repositorio.ps1" -Testar
+  ) >/dev/null 2>&1 &
+)
+exit 0

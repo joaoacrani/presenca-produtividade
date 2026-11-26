@@ -1,0 +1,37 @@
+# ===== SEGREDOS: nunca versionar =====
+Servidor/credenciais.json
+Servidor/local/
+Servidor/build/
+**/config.php
+!Servidor/fonte/_app/.htaccess
+**/.env
+*.key
+*.pem
+*.pfx
+chaves/
+
+# ===== Banco de dados e dados de uso =====
+*.sqlite
+*.sqlite-journal
+*.db
+dados/
+
+# ===== Saidas geradas (contem token do agent) =====
+# Sao recriadas pelos atalhos 3 e 4 ou pelo pipeline. Publique-as como artefato, nao no git.
+Entregas/
+
+# ===== Legado e temporarios =====
+_legado/
+node_modules/
+*.log
+*.tmp
+Thumbs.db
+.DS_Store
+.claude/
+
+# Modelo de assinatura de e-mail do escritorio (traz dados pessoais de contato); os PNGs do logo ja estao em _app/public
+Logo/
+
+# Perfis de VPN (contem certificado e chave do cliente)
+*.ovpn
+Modelos/VPN/*.zip
