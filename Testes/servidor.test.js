@@ -480,7 +480,7 @@ test('escala: o banco usa WAL, tem os indices de data e da para desligar o WAL p
     $db = abrirBanco($cfg);
     $idx = $db->query("SELECT name FROM sqlite_master WHERE type='index'")->fetchAll(PDO::FETCH_COLUMN);
     echo modoDiario($db), '|', (int)$db->query('PRAGMA user_version')->fetchColumn(), '|', in_array('idx_nav_ts', $idx) ? 'nav' : '-', '|', in_array('idx_foco_ts', $idx) ? 'foco' : '-';`);
-  assert.equal(a, 'wal|20|nav|foco');
+  assert.equal(a, 'wal|21|nav|foco');
   const b = phpEscala(PHP_ESCALA_BASE(path.join(tmp, 'b'), ", 'sqlite_wal' => false") + `$db = abrirBanco($cfg); echo modoDiario($db);`);
   assert.equal(b, 'delete');
 });
@@ -1913,13 +1913,13 @@ test('painel: HTML bem formado, cada menu tem sua secao e todo elemento ligado n
   assert.equal(ids.size, (semComentarios.match(/\bid="/g) || []).length, 'id repetido');
   // cada botao de menu leva a uma secao que existe (e fora de comentario)
   const abas = [...semComentarios.matchAll(/data-aba="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(abas, ['presenca', 'bi', 'produtividade', 'classificacao', 'relatorio', 'politicas', 'inventario', 'remoto', 'admin']);
+  assert.deepEqual(abas, ['presenca', 'bi', 'produtividade', 'classificacao', 'relatorio', 'politicas', 'chamados', 'inventario', 'remoto', 'admin']);
   for (const a of abas) assert.ok(ids.has(`aba-${a}`), `falta a secao aba-${a}`);
   // dois modulos, com as abas nos lugares combinados
   const modulos = [...semComentarios.matchAll(/<div class="modulo" data-titulo="([^"]+)">([\s\S]*?)<\/div>\s*(?=<div class="modulo"|<\/nav>)/g)];
   assert.deepEqual(modulos.map((m) => m[1]), ['Presença e Produtividade', 'Administração']);
   assert.deepEqual([...modulos[0][2].matchAll(/data-aba="([^"]+)"/g)].map((m) => m[1]), ['presenca', 'bi', 'produtividade', 'classificacao']);
-  assert.deepEqual([...modulos[1][2].matchAll(/data-aba="([^"]+)"/g)].map((m) => m[1]), ['relatorio', 'politicas', 'inventario', 'remoto', 'admin']);
+  assert.deepEqual([...modulos[1][2].matchAll(/data-aba="([^"]+)"/g)].map((m) => m[1]), ['relatorio', 'politicas', 'chamados', 'inventario', 'remoto', 'admin']);
   // todo $('id').addEventListener / .href / .textContent feito FORA de funcao (na carga do script) precisa de elemento existente
   for (const arq of fs.readdirSync(pub).filter((f) => f.endsWith('.js') && !['qrcode.js', 'login.js'].includes(f))) {
     const js = fs.readFileSync(path.join(pub, arq), 'utf8');
@@ -2534,4 +2534,192 @@ test('painel: politicas de instalacao no menu Administracao, zip e desinstalacao
   assert.match(js, /acao: swAlvoAcao/);
   assert.match(js, /0x06054b50/, 'le o diretorio central do zip no navegador');
   assert.match(js, /bin\.charCodeAt\(i\) === 0/, 'tira o zero a esquerda do JWK');
+});
+
+// ---------- chamados do HelpDesk (relatorios do TomTicket) ----------
+const vmCh = require('node:vm');
+const zlibCh = require('node:zlib');
+
+function carregarLeitorXlsx() {
+  const ctx = { TextDecoder, TextEncoder, Blob, Response, DecompressionStream, Uint8Array, DataView, Map, Math, Date, Error, console };
+  vmCh.createContext(ctx);
+  vmCh.runInContext(fs.readFileSync(path.join(WEB, '_app', 'public', 'chamados-xlsx.js'), 'utf8'), ctx);
+  return ctx;
+}
+const jsonCh = (x) => JSON.parse(JSON.stringify(x));
+
+// zip com compressao deflate (metodo 8) ou sem compressao (metodo 0), so para montar .xlsx de teste
+function zipCh(arqs, metodo) {
+  const partes = [], cd = []; let off = 0; const nomes = Object.keys(arqs);
+  for (const nome of nomes) {
+    const n = Buffer.from(nome), dados = Buffer.from(arqs[nome]), crc = zlibCh.crc32(dados);
+    const comp = metodo === 8 ? zlibCh.deflateRawSync(dados) : dados;
+    const lh = Buffer.alloc(30);
+    lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(20, 4); lh.writeUInt16LE(metodo, 8); lh.writeUInt32LE(crc, 14);
+    lh.writeUInt32LE(comp.length, 18); lh.writeUInt32LE(dados.length, 22); lh.writeUInt16LE(n.length, 26);
+    partes.push(lh, n, comp);
+    const ch = Buffer.alloc(46);
+    ch.writeUInt32LE(0x02014b50, 0); ch.writeUInt16LE(20, 4); ch.writeUInt16LE(20, 6); ch.writeUInt16LE(metodo, 10); ch.writeUInt32LE(crc, 16);
+    ch.writeUInt32LE(comp.length, 20); ch.writeUInt32LE(dados.length, 24); ch.writeUInt16LE(n.length, 28); ch.writeUInt32LE(off, 42);
+    cd.push(ch, n); off += 30 + n.length + comp.length;
+  }
+  const cdb = Buffer.concat(cd), eo = Buffer.alloc(22);
+  eo.writeUInt32LE(0x06054b50, 0); eo.writeUInt16LE(nomes.length, 8); eo.writeUInt16LE(nomes.length, 10); eo.writeUInt32LE(cdb.length, 12); eo.writeUInt32LE(off, 16);
+  return Buffer.concat([...partes, cdb, eo]);
+}
+
+// .xlsx minimo: linhas = arrays de texto ou numero (null = celula vazia). Strings vao para sharedStrings, com uma em rich text.
+function xlsxCh(linhas, metodo = 8) {
+  const strs = [];
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const col = (i) => String.fromCharCode(65 + i);
+  let corpo = '';
+  linhas.forEach((l, r) => {
+    let cels = '';
+    l.forEach((v, c) => {
+      if (v === null || v === undefined) return;
+      if (typeof v === 'number') cels += `<c r="${col(c)}${r + 1}"><v>${v}</v></c>`;
+      else { strs.push(v); cels += `<c r="${col(c)}${r + 1}" t="s"><v>${strs.length - 1}</v></c>`; }
+    });
+    corpo += cels ? `<row r="${r + 1}">${cels}</row>` : `<row r="${r + 1}"/>`;
+  });
+  const si = strs.map((t, i) => (i === 1 && t.length > 3 ? `<si><r><t>${esc(t.slice(0, 3))}</t></r><r><t xml:space="preserve">${esc(t.slice(3))}</t></r></si>` : `<si><t>${esc(t)}</t></si>`)).join('');
+  return zipCh({
+    '[Content_Types].xml': '<Types/>',
+    'xl/workbook.xml': '<workbook><sheets><sheet name="Worksheet" sheetId="1" r:id="rId1"/></sheets></workbook>',
+    'xl/sharedStrings.xml': `<?xml version="1.0"?><sst count="${strs.length}">${si}</sst>`,
+    'xl/worksheets/sheet1.xml': `<?xml version="1.0"?><worksheet><sheetData>${corpo}</sheetData></worksheet>`,
+  }, metodo);
+}
+
+const CAB_AMBAS = ['Protocolo', 'Assunto', 'Mensagem', 'Departamento', 'Atendente', 'Atendente Finalizador', 'Cliente', 'Data de Criação', 'Data de Finalização', 'Categoria (Finalização - Chamado Externo)'];
+const CAB_SO_FIM = ['Protocolo', 'Assunto', 'Mensagem', 'Departamento', 'Atendente', 'Atendente Finalizador', 'Cliente', 'Data de Finalização', 'Categoria (Finalização - Chamado Externo)'];
+const CAB_SO_CRI = ['Protocolo', 'Assunto', 'Mensagem', 'Departamento', 'Atendente', 'Atendente Finalizador', 'Cliente', 'Data de Criação', 'Categoria (Finalização - Chamado Externo)'];
+const topoCh = (cab, qtd) => [['Padrão'], [], ['HelpDesk'], ['Data: ', '19/10/2026 09:50:39', null, 'Quantidade de Registros: ', qtd], cab];
+// serial do Excel (dias desde 30/12/1899) para o texto esperado, calculado de forma independente do codigo testado
+const serialCh = (n) => new Date(Math.round(Date.UTC(1899, 11, 30) + n * 86400000)).toISOString().slice(0, 19).replace('T', ' ');
+
+test('chamados: o leitor entende o .xlsx (com e sem compressao), texto em varias partes e entidades XML', async () => {
+  const L = carregarLeitorXlsx();
+  const linhas = [['Protocolo', 'Atendente finalizador', 'Assunto'], [1, 'Ana & Bia', '<ok> "x"'], [], [2, 'Ação com acento', 'z']];
+  for (const metodo of [8, 0]) {
+    const m = jsonCh(await L.ccLerXlsx(xlsxCh(linhas, metodo)));
+    assert.equal(m[0].B, 'Atendente finalizador', 'texto em varias partes (rich text) volta inteiro');
+    assert.equal(m[1].B, 'Ana & Bia'); assert.equal(m[1].C, '<ok> "x"');
+    assert.equal(m[1].A, '1'); assert.equal(m[3].B, 'Ação com acento');
+  }
+  await assert.rejects(() => L.ccLerXlsx(Buffer.from('isto nao e um zip, e so texto comprido o bastante para a busca')), /não é um \.xlsx válido/);
+});
+
+test('chamados: o relatorio do TomTicket e lido pelo NOME das colunas, nos tres layouts, sem a mensagem', async () => {
+  const L = carregarLeitorXlsx();
+  const ler = async (cab, linhas) => jsonCh(L.ccParseTomTicket(await L.ccLerXlsx(xlsxCh([...topoCh(cab, linhas.length), ...linhas, [], []]))));
+  // layout com as duas datas
+  let r = await ler(CAB_AMBAS, [
+    [1001, 'Troca de senha', 'texto da mensagem com dados pessoais', 'Empresa', 'Ana A', 'Ana B', 'Carlos C', 46311.5, 46311.75, 'Acessos e Cadastramento '],
+    [1002, 'Toner & <urgente>', 'outra mensagem', 'Empresa', 'Bia', 'Bia', 'Dora', 46312.25, 46313.25, 'Impressoras e Periféricos'],
+    [1003, 'Sem categoria', 'm', 'Empresa', 'Ana A', 'Ana A', 'Carlos C', 46312.5, 46312.51, null]]);
+  assert.equal(r.linhas.length, 3); assert.equal(r.ignoradas, 0);
+  assert.deepEqual(r.colunas, { criacao: true, finalizacao: true, categoria: true });
+  assert.equal(r.linhas[0].protocolo, 1001); assert.equal(r.linhas[0].finalizador, 'Ana B'); assert.equal(r.linhas[0].categoria, 'Acessos e Cadastramento');
+  assert.equal(r.linhas[0].criado, serialCh(46311.5)); assert.equal(r.linhas[0].finalizado, serialCh(46311.75));
+  assert.equal(r.linhas[1].assunto, 'Toner & <urgente>'); assert.equal(r.linhas[2].categoria, '');
+  assert.ok(!JSON.stringify(r).includes('dados pessoais') && !JSON.stringify(r).includes('outra mensagem'), 'a mensagem do chamado nunca e lida');
+  // layout so com a data de finalizacao (a coluna H muda de significado)
+  r = await ler(CAB_SO_FIM, [[2001, 'A', 'm', 'Empresa', 'Ana', 'Ana', 'Cli', 46311.75, 'Legale']]);
+  assert.deepEqual(r.colunas, { criacao: false, finalizacao: true, categoria: true });
+  assert.equal(r.linhas[0].criado, ''); assert.equal(r.linhas[0].finalizado, serialCh(46311.75)); assert.equal(r.linhas[0].categoria, 'Legale');
+  // layout so com a data de criacao
+  r = await ler(CAB_SO_CRI, [[3001, 'B', 'm', 'Empresa', 'Ana', 'Ana', 'Cli', 46311.75, '']]);
+  assert.equal(r.linhas[0].criado, serialCh(46311.75)); assert.equal(r.linhas[0].finalizado, '');
+  // sem cabecalho conhecido
+  r = await ler(['Coluna 1', 'Coluna 2'], []);
+  assert.match(r.erro, /cabeçalho do relatório do TomTicket/);
+});
+
+test('chamados: datas em texto (dd/mm/aaaa) e ja no formato ISO tambem funcionam; lixo vira vazio', () => {
+  const L = carregarLeitorXlsx();
+  assert.equal(L.ccDataTexto('19/10/2026 09:50:39'), '2026-10-19 09:50:39');
+  assert.equal(L.ccDataTexto('5/3/2026'), '2026-03-05 00:00:00');
+  assert.equal(L.ccDataTexto('2026-10-19T09:50'), '2026-10-19 09:50:00');
+  assert.equal(L.ccDataTexto('46311,5'), serialCh(46311.5), 'virgula decimal');
+  for (const ruim of ['', 'abc', '12', '99999999']) assert.equal(L.ccDataTexto(ruim), '');
+});
+
+test('PHP chamados: importa sem duplicar, completa o que faltava, valida, calcula o relatorio e so o admin usa', opt, async () => {
+  const s = await subir();
+  try {
+    const a = await s.entrar();
+    const base = [
+      { protocolo: 1001, assunto: 'Troca de senha', departamento: 'Empresa', atendente: 'Ana', finalizador: 'Ana', cliente: 'Carlos', categoria: 'Acessos', criado: '2026-10-19 08:00:00', finalizado: '2026-10-19 10:00:00' },
+      { protocolo: '1002', assunto: 'Impressora', atendente: 'Bia', finalizador: 'Bia', cliente: 'Dora', categoria: 'Impressoras', criado: '2026-10-19 09:00:00', finalizado: '2026-10-21 09:00:00' },
+      { protocolo: 1003, assunto: 'Sem categoria', atendente: 'Ana', cliente: 'Carlos', criado: '2026-10-20 08:00:00', finalizado: '2026-10-20 08:30:00' },
+      { protocolo: 1004, assunto: 'Aberto', atendente: 'Bia', cliente: 'Dora', criado: '2026-10-20 15:00:00' },
+      { protocolo: 'x1', assunto: 'protocolo ruim' }, { protocolo: -5 }, 'lixo',
+      { protocolo: 1005, criado: '2026-10-21 10:00:00', finalizado: '2026-10-21 09:00:00' },
+    ];
+    const post = (linhas, arquivo = 'a.xlsx') => a.enviar('/api/chamados/importar', 'POST', { linhas, arquivo });
+    let r = await (await post(base)).json();
+    assert.deepEqual([r.novos, r.atualizados, r.iguais, r.invalidos], [4, 0, 0, 4]);
+    assert.ok(r.erros.some((e) => /finalizado antes de criado/.test(e)));
+    // importar de novo (relatorios que se sobrepoem): nada duplica
+    r = await (await post(base)).json();
+    assert.deepEqual([r.novos, r.atualizados, r.iguais], [0, 0, 4]);
+    // valor vazio nunca apaga o que ja existe
+    r = await (await post([{ protocolo: 1001, assunto: '', cliente: '', categoria: '', criado: '', finalizado: '' }])).json();
+    assert.deepEqual([r.novos, r.atualizados, r.iguais], [0, 0, 1]);
+    // completa o chamado que estava aberto (outro relatorio traz a finalizacao e a categoria)
+    r = await (await post([{ protocolo: 1004, finalizador: 'Bia', categoria: 'Acessos', finalizado: '2026-10-21 12:00:00' }], 'b.xlsx')).json();
+    assert.deepEqual([r.novos, r.atualizados, r.iguais], [0, 1, 0]);
+    const c = await a.json('/api/chamados/resumo');
+    assert.equal(c.total, 4); assert.ok(c.ultimo_import > 0);
+
+    const rel = await a.json('/api/chamados/relatorio?de=2026-10-19&ate=2026-10-21&base=finalizacao');
+    assert.equal(rel.resumo.total, 4); assert.equal(rel.resumo.finalizados, 4); assert.equal(rel.resumo.abertos, 0); assert.equal(rel.resumo.sem_categoria, 1);
+    assert.equal(rel.resumo.tempo_medio_h, 17.9);       // (2 + 48 + 0,5 + 21) / 4
+    assert.equal(rel.resumo.tempo_mediano_h, 11.5);
+    assert.equal(rel.resumo.pct_ate_24h, 75); assert.equal(rel.resumo.pct_ate_72h, 100);
+    assert.deepEqual(rel.por_categoria.map((g) => [g.nome, g.total]), [['Acessos', 2], ['Impressoras', 1], ['Sem categoria', 1]]);
+    assert.deepEqual(rel.por_atendente.map((g) => [g.nome, g.total]), [['Ana', 2], ['Bia', 2]], 'sem finalizador vale o atendente');
+    assert.deepEqual(rel.top_solicitantes.map((g) => [g.nome, g.total]), [['Carlos', 2], ['Dora', 2]]);
+    assert.equal(rel.evolucao.granularidade, 'dia'); assert.equal(rel.evolucao.serie.length, 3);
+    assert.equal(rel.por_dia_semana.reduce((n, d) => n + d.total, 0), 4);
+    assert.equal(rel.anterior.total, 0); assert.equal(rel.anterior.variacao_total_pct, null);
+    // pela data de criacao entram tambem os que foram abertos no periodo
+    const porCri = await a.json('/api/chamados/relatorio?de=2026-10-19&ate=2026-10-19&base=criacao');
+    assert.equal(porCri.resumo.total, 2);
+    // periodo seguinte compara com o anterior
+    const seg = await a.json('/api/chamados/relatorio?de=2026-10-20&ate=2026-10-21&base=finalizacao');
+    assert.equal(seg.resumo.total, 3); assert.equal(seg.anterior.total, 1); assert.equal(seg.anterior.variacao_total_pct, 200);
+
+    // Excel
+    const x = await s.req('/api/export/chamados.xlsx?de=2026-10-19&ate=2026-10-21&base=finalizacao', { headers: { Cookie: a.cookie } });
+    assert.equal(x.status, 200); assert.match(x.headers.get('content-type'), /spreadsheetml/);
+    assert.equal(Buffer.from(await x.arrayBuffer()).subarray(0, 2).toString(), 'PK');
+
+    // so administrador: gestor e visitante sem sessao nao importam nem veem
+    await a.enviar('/api/usuarios', 'POST', { login: 'gestor1', nome: 'G', senha: 'senha-gestor-1', papel: 'gestor' });
+    const g = await s.entrar('gestor1', 'senha-gestor-1');
+    assert.equal((await g.enviar('/api/chamados/importar', 'POST', { linhas: base })).status, 403);
+    assert.equal((await s.req('/api/chamados/relatorio', { headers: { Cookie: g.cookie } })).status, 403);
+    assert.equal((await s.req('/api/chamados/resumo', { headers: { Cookie: g.cookie } })).status, 403);
+    assert.equal((await s.req('/api/export/chamados.xlsx', { headers: { Cookie: g.cookie } })).status, 403);
+    assert.equal((await s.req('/api/chamados/resumo')).status, 401);
+    assert.equal((await a.enviar('/api/chamados/importar', 'POST', { linhas: [] })).status, 400);
+    const aud = JSON.stringify(await a.json('/api/auditoria'));
+    assert.ok(aud.includes('chamados_importar') && aud.includes('b.xlsx'));
+  } finally { s.fechar(); }
+});
+
+test('painel: a aba Chamados existe, carrega os scripts e nao envia a mensagem do chamado', () => {
+  const pub = path.join(WEB, '_app', 'public');
+  const html = fs.readFileSync(path.join(pub, 'index.html'), 'utf8');
+  assert.match(html, /<section id="aba-chamados"/);
+  assert.match(html, /data-aba="chamados"[^>]*>Chamados do HelpDesk</);
+  assert.ok(html.indexOf('chamados-xlsx.js') < html.indexOf('src="chamados.js"'), 'o leitor carrega antes da aba');
+  const leitor = fs.readFileSync(path.join(pub, 'chamados-xlsx.js'), 'utf8');
+  assert.doesNotMatch(leitor, /mensagem:/, 'a coluna Mensagem nao entra no que e enviado');
+  const aba = fs.readFileSync(path.join(pub, 'chamados.js'), 'utf8');
+  assert.match(aba, /api\/chamados\/importar/); assert.match(aba, /api\/export\/chamados\.xlsx/);
+  assert.doesNotMatch(aba + leitor, /localStorage|sessionStorage|indexedDB/);
 });
