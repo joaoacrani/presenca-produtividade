@@ -33,7 +33,7 @@ PC (agent PowerShell) --HTTPS--> servidor PHP + SQLite (hospedagem compartilhada
 | **Painel BI** | Exporta localização e produtividade (CSV) e imprime. Por colaborador: % produtivo, tempo por categoria, dias presenciais x remotos x sem registro, unidade; evolução diária; sites mais acessados; clique no nome para o detalhe (dias, sites, últimos acessos) |
 | **Produtividade** | Tabela produtivo x improdutivo x neutro por colaborador no período, exportável em CSV (Excel) ou impressão/PDF |
 | **Classificação de sites** | Regras domínio → produtivo / improdutivo / neutro; lista dos sites ainda sem regra, para classificar com um clique |
-| **Administração** (admin) | Nome completo e setor de cada colaborador; usuários do painel; exportação dos acessos detalhados; **políticas de instalação de software** nos PCs (pacotes assinados, zip, gatilho, desinstalação e aplicação automática) |
+| **Administração** (admin) | Nome completo e setor de cada colaborador; usuários do painel; exportação dos acessos detalhados; **chamados do HelpDesk** (importação dos relatórios do TomTicket e relatório de chamados); **políticas de instalação de software** nos PCs (pacotes assinados, zip, gatilho, desinstalação e aplicação automática) |
 
 **Filtros de período** (BI, Produtividade e Administração): botões 7 dias, 30 dias, 90 dias, Este mês e Mês passado, com o ativo destacado e o intervalo escrito ao lado ("26/10/2026 a 24/11/2026 · 30 dias"). "Personalizado" mostra as duas datas, e o intervalo nunca fica invertido. No BI, a busca por colaborador abre uma **lista de sugestões ao digitar** (nome em destaque, login, setor e % produtivo, com setas, Enter e Esc) e **todos os números da tela acompanham o filtro**: cartões, gráficos por dia, sites e programas mais usados e listas, calculados no servidor só para quem a busca cobre (`/api/bi?logins=a,b`). Há "Limpar busca" (ou Esc), e todas as saídas ficam no menu **Exportar** (Excel, CSV de localização, CSV de produtividade, Imprimir/PDF).
 
@@ -332,7 +332,7 @@ Servidor/
     _app/lib/            db, auth, totp, relatorios, relatorio_mensal, relatorio_individual, api_v1, inventario,
                          remoto, batimento, comparativo, backup, alertas, software, resumos, exportacao*, rh, sugestoes ...
     _app/public/         painel: index.html, login.html, app.js, bi.js, relatorio.js, admin.js, inventario.js,
-                         remoto.js, software.js, style.css
+                         remoto.js, software.js, chamados.js, chamados-xlsx.js, style.css
     _app/dados/          criado no servidor: banco, chaves e backup (fechado ao navegador; NUNCA vai no git)
   Publicar/              publicação por FTPS (Publicar-Servidor.ps1), backup do banco (Backup-Servidor.ps1)
   Gerar-Hospedagem.ps1   monta os zips; Iniciar-Servidor.ps1 liga o servidor local de teste
@@ -764,6 +764,42 @@ sequenceDiagram
 **Como cada tipo roda** (como SYSTEM, sem janela, na pasta de trabalho do pacote): `.msi` com `msiexec /i`; `.exe` com os parâmetros informados; `.ps1` com `powershell -ExecutionPolicy Bypass -File`; `.cmd`/`.bat` com `cmd /c`; `.vbs` com `cscript //nologo`. Os códigos 0, 3010 e 1641 contam como instalado (os dois últimos avisam que falta reiniciar). Para MSI o painel sugere `/qn /norestart`; instaladores `.exe` precisam dos parâmetros silenciosos do fabricante.
 
 **Detalhes.** O arquivo do pacote fica em `_app/dados/software/` (fechado ao navegador) e **não entra no backup do banco**: guarde o original do instalador. O histórico das tarefas (banco v20, tabelas `pacotes` e `tarefas`) fica 1 ano. Uma tarefa "executando" há mais de 2 h (PC desligou no meio) volta à fila; por isso o script ou instalador deve poder rodar de novo sem estragar nada. Mudar parâmetros, gatilho ou desinstalação de um pacote é cadastrar outro, porque a assinatura cobre o arquivo e esses campos juntos. O limite de tamanho é `software_max_mb` (padrão 200 MB) e o envio também esbarra no limite da hospedagem.
+
+### 5.10. Chamados do HelpDesk (relatórios do TomTicket)
+
+Em **Administração → Chamados do HelpDesk** o administrador **importa os relatórios exportados do TomTicket** (`.xlsx`) e gera o **relatório de chamados** do período (mês anterior, mês atual, 7, 30 ou 90 dias, ou datas escolhidas), com impressão/PDF e Excel.
+
+**Importação.** O navegador lê o `.xlsx` (um zip com XML; sem biblioteca, só `DecompressionStream`) e envia ao servidor **apenas as linhas**, em lotes de 500, como já é feito no cadastro do RH. Pode-se escolher vários arquivos de uma vez. Pontos importantes:
+
+- **As colunas são lidas pelo nome do cabeçalho**, não pela posição: os relatórios do TomTicket variam (alguns trazem "Data de Criação", outros "Data de Finalização", outros os dois). Os arquivos de teste tinham 3 layouts diferentes.
+- **O protocolo é a chave.** Os relatórios se sobrepõem (a mesma semana aparece em mais de um arquivo), então importar de novo **não duplica**: só completa o que faltava (por exemplo, a data de finalização ou a categoria de um chamado que estava aberto) e **um valor vazio nunca apaga** um valor que já existe. Linhas com protocolo inválido ou com finalização anterior à criação são recusadas, e o resumo mostra quantos foram novos, atualizados, iguais e inválidos.
+- **Privacidade:** o texto da **mensagem** do chamado (que traz dados pessoais) **nunca é lido nem enviado**. Ficam protocolo, assunto, departamento, atendente, atendente finalizador, solicitante, categoria e as duas datas (banco v21, tabela `chamados`).
+- Só o administrador importa e vê (a aba, a API e o Excel recusam gestor e visitante), e a importação fica na auditoria (`chamados_importar`).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Adm as Administrador
+    participant Nav as Navegador (painel)
+    participant Srv as Servidor PHP
+    participant DB as SQLite
+    Adm->>Nav: escolhe os .xlsx do TomTicket e clica em Importar
+    Nav->>Nav: descompacta, acha o cabeçalho pelo nome e ignora a mensagem
+    loop lotes de 500 linhas
+        Nav->>Srv: POST /api/chamados/importar (linhas)
+        Srv->>DB: insere o protocolo novo ou completa o existente
+        Srv-->>Nav: novos, atualizados, iguais e inválidos
+    end
+    Adm->>Nav: escolhe o período e clica em Gerar
+    Nav->>Srv: GET /api/chamados/relatorio (de, ate, base)
+    Srv->>DB: chamados do período e do período anterior
+    Srv-->>Nav: indicadores e agrupamentos
+    Nav-->>Adm: relatório (imprimir, PDF ou Excel)
+```
+
+**O relatório** conta cada chamado no dia da **finalização** (padrão) ou da **criação**, e traz: total, finalizados, sem finalização, sem categoria, chamados por dia útil, **tempo médio e mediano até finalizar** (só dos chamados que têm as duas datas), % finalizados em até 24 h e 72 h, a **variação em relação ao período anterior** de mesmo tamanho, e as tabelas **por categoria**, **por atendente** (quem finalizou), **quem mais abriu** (15 primeiros), **evolução** (por dia, por semana ou por mês, conforme o tamanho do período) e **dia da semana**. O Excel (`/api/export/chamados.xlsx`) leva os indicadores, os agrupamentos e a lista completa dos chamados do período.
+
+**Limites conhecidos.** O relatório do TomTicket só traz datas de **criação** e **finalização**: não há prazo de SLA nem horário de primeira resposta, então esses indicadores não existem. Há um departamento só nos dados atuais, então não há quebra por departamento. A unidade do solicitante aparece apenas no texto da mensagem (que não é lida) e por isso não entra.
 
 ## 6. Guia do desenvolvedor
 
