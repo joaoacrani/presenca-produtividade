@@ -1,0 +1,39 @@
+name: Testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  servidor:
+    name: Servidor (Node e PHP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, sqlite3, mbstring, openssl, zip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Rodar os testes do servidor
+        run: node --test Testes/servidor.test.js
+
+  agent:
+    name: Agent (Pester, PowerShell 5.1)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar o Pester 3.4
+        shell: powershell
+        run: |
+          Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force | Out-Null
+          Install-Module Pester -RequiredVersion 3.4.0 -Force -SkipPublisherCheck -Scope CurrentUser
+      - name: Rodar os testes do agent
+        shell: powershell
+        run: |
+          Import-Module Pester -RequiredVersion 3.4.0
+          $r = Invoke-Pester .\Testes -PassThru
+          if ($r.FailedCount -gt 0) { exit 1 }
