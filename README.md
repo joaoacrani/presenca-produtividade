@@ -1,5 +1,7 @@
 # Presença e Produtividade dos PCs
 
+[![Testes](https://github.com/joaoacrani/presenca-produtividade/actions/workflows/testes.yml/badge.svg)](https://github.com/joaoacrani/presenca-produtividade/actions/workflows/testes.yml) ![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green) ![PowerShell](https://img.shields.io/badge/PowerShell-5391FE?logo=powershell&logoColor=white) ![PHP](https://img.shields.io/badge/PHP-777BB4?logo=php&logoColor=white) ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white) ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=white)
+
 > **Projeto de portfólio.** Sistema completo de presença e produtividade de PCs (agent em PowerShell, servidor PHP + SQLite, painel web). Todos os nomes, domínios, redes (`10.x`, faixas de documentação), endereços MAC, usuários e unidades (`MTZ`, `FL1`, `FL2`) são **exemplos fictícios**. Para usar de verdade, edite `Config/unidades.json` com a sua rede e gere as suas próprias chaves (`Agent\Assinar-Atualizacao.ps1 -NovaChave`).
 
 ## Sumário
