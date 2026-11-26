@@ -987,3 +987,7 @@ sequenceDiagram
 - **Repositório:** o git não tem remoto (Azure DevOps ainda não configurado). A cópia de segurança é o `.bundle` no OneDrive, e a integração contínua é o gancho local de testes.
 - **Software nos PCs:** sem certificado com chave privada (`.pfx`), sem grupos de máquinas (o alvo é por nome, com `*` e `?`), sem agendamento por horário, sem varredura de software não autorizado (conformidade só do que foi instalado por política) e sem reinício automático; a tarefa roda a cada 15 min, então a instalação não é imediata.
 - **Relay do acesso remoto:** só na rede interna; fora do escritório o acesso depende de VPN.
+
+## Licença
+
+MIT. Veja o arquivo [LICENSE](LICENSE).
