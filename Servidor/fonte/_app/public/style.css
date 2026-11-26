@@ -817,3 +817,9 @@ dialog { border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
 .sw-grade .sw-larga { grid-column: 1 / -1; }
 .sw-grade input[type=text], .sw-grade select { width: 100%; }
 .sw-acoes { display: flex; flex-wrap: wrap; gap: 6px; min-width: 150px; }
+
+/* Chamados do HelpDesk */
+.ch-log { list-style: none; padding: 0; margin: 6px 0 12px; display: grid; gap: 4px; font-size: 13px; color: var(--mudo, #5b6577); }
+.ch-log .erro { color: #b3261e; }
+.ch-filtros { align-items: end; }
+@media print { .ch-controles { display: none !important; } }

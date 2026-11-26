@@ -26,6 +26,7 @@
           <p class="modulo-titulo">Administração</p>
           <button type="button" data-aba="relatorio" data-admin hidden>Relatório</button>
           <button type="button" data-aba="politicas" data-admin hidden>Políticas de Instalação</button>
+          <button type="button" data-aba="chamados" data-admin hidden>Chamados do HelpDesk</button>
           <button type="button" data-aba="inventario">Inventário</button>
           <button type="button" data-aba="remoto" data-admin hidden>Acesso remoto</button>
           <button type="button" data-aba="admin" data-admin hidden>Administração</button>
@@ -367,6 +368,30 @@
       </div>
     </section>
 
+    <!-- ===== Chamados do HelpDesk / TomTicket (admin) ===== -->
+    <section id="aba-chamados" class="aba" hidden>
+      <div class="painel ch-controles">
+        <div class="painel-topo"><h2>Chamados do HelpDesk (TomTicket)</h2><span class="mudo" id="ch-resumo"></span></div>
+        <div class="recuo">
+          <p class="mudo">Importe os relatórios exportados do TomTicket (<code>.xlsx</code>). Pode escolher vários arquivos de uma vez: a mesma semana pode aparecer em mais de um relatório e o sistema <b>não duplica</b> (o protocolo é a chave; importar de novo só completa o que faltava). O texto da mensagem do chamado <b>não é lido nem guardado</b>: ficam protocolo, assunto, solicitante, atendente, categoria e datas.</p>
+          <p class="form-linha"><input id="ch-arq" type="file" multiple accept=".xlsx" aria-label="Relatórios do TomTicket (.xlsx)"><button class="btn primario" type="button" id="ch-importar">Importar</button></p>
+          <ul id="ch-log" class="ch-log"></ul>
+          <div class="form-linha ch-filtros">
+            <label class="mudo">Período <select id="ch-periodo" aria-label="Período do relatório">
+              <option value="mes-anterior">mês anterior</option><option value="mes-atual">mês atual</option><option value="7">últimos 7 dias</option>
+              <option value="30">últimos 30 dias</option><option value="90">últimos 90 dias</option><option value="personalizado">período escolhido</option></select></label>
+            <span id="ch-l-per" hidden><label class="mudo">De <input type="date" id="ch-de" aria-label="Data inicial"></label> <label class="mudo">até <input type="date" id="ch-ate" aria-label="Data final"></label></span>
+            <label class="mudo">Contar pela <select id="ch-base" aria-label="Base da contagem"><option value="finalizacao">data de finalização</option><option value="criacao">data de criação</option></select></label>
+            <button class="btn primario" type="button" id="ch-gerar">Gerar</button>
+            <button class="btn" type="button" id="ch-imprimir" disabled>Imprimir / salvar PDF</button>
+            <a class="btn" id="ch-excel" href="#" download hidden>Baixar Excel</a>
+          </div>
+          <p id="ch-msg" class="mudo" role="status"></p>
+        </div>
+      </div>
+      <article id="ch-doc" class="rel-doc" hidden></article>
+    </section>
+
     <!-- ===== Relatório de produtividade (admin) ===== -->
     <section id="aba-relatorio" class="aba" hidden>
       <div class="painel rel-controles">
@@ -536,6 +561,8 @@
   <script src="relatorio.js"></script>
   <script src="admin.js"></script>
   <script src="software.js"></script>
+  <script src="chamados-xlsx.js"></script>
+  <script src="chamados.js"></script>
   <script src="inventario.js"></script>
   <script src="remoto.js"></script>
   <script src="qrcode.js"></script>
