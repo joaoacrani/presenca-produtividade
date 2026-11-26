@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Presença e Produtividade</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="lateral" id="lateral" aria-label="Menu principal">
+      <div class="lateral-marca">
+        <img class="lateral-logo" src="logo-claro.png" alt="Presença e Produtividade" width="150" height="69">
+        <h1>Presença e Produtividade</h1>
+        <p class="sub">Onde cada computador está e o que é acessado nele</p>
+      </div>
+      <nav class="abas" id="abas" aria-label="Seções">
+        <div class="modulo" data-titulo="Presença e Produtividade">
+          <p class="modulo-titulo">Presença e Produtividade</p>
+          <button type="button" data-aba="presenca" class="ativa">Presença agora</button>
+          <button type="button" data-aba="bi">Painel BI</button>
+          <button type="button" data-aba="produtividade">Produtividade</button>
+          <button type="button" data-aba="classificacao">Classificação de sites</button>
+        </div>
+        <div class="modulo" data-titulo="Administração">
+          <p class="modulo-titulo">Administração</p>
+          <button type="button" data-aba="relatorio" data-admin hidden>Relatório</button>
+          <button type="button" data-aba="politicas" data-admin hidden>Políticas de Instalação</button>
+          <button type="button" data-aba="inventario">Inventário</button>
+          <button type="button" data-aba="remoto" data-admin hidden>Acesso remoto</button>
+          <button type="button" data-aba="admin" data-admin hidden>Administração</button>
+        </div>
+      </nav>
+      <div class="lateral-rodape">
+        <span id="quem" class="mudo"></span>
+        <button id="btn-2fa" class="btn" type="button">Verificação em 2 etapas</button>
+        <button id="btn-senha" class="btn" type="button">Trocar senha</button>
+        <button id="btn-sair" class="btn" type="button">Sair</button>
+      </div>
+    </aside>
+    <div class="lateral-fundo" id="lateral-fundo" hidden></div>
+
+    <div class="conteudo">
+      <header class="topo">
+        <button id="btn-menu" class="btn menu-toggle" type="button" aria-label="Abrir menu" aria-controls="lateral" aria-expanded="false">☰ Menu</button>
+        <div class="topo-titulo">
+          <p id="modulo-pagina" class="modulo-pagina mudo"></p>
+          <h2 id="titulo-pagina" class="titulo-pagina"></h2>
+        </div>
+        <span id="atualizado" class="mudo"></span>
+      </header>
+
+  <main>
+    <!-- ===== Presença agora ===== -->
+    <section id="aba-presenca" class="aba">
+      <div id="aviso" class="aviso" hidden></div>
+      <div id="cartoes" class="cartoes" aria-label="Resumo"></div>
+      <div class="painel">
+        <div class="painel-topo">
+          <h2>Máquinas</h2>
+          <div class="filtros">
+            <input id="busca" type="search" placeholder="Buscar colaborador ou máquina" aria-label="Buscar">
+            <select id="f-status" aria-label="Filtrar por situação">
+              <option value="">Todas as situações</option>
+              <option>Presencial</option><option>Presencial via VPN</option><option>Remoto via VPN</option>
+              <option>Remoto</option><option>Sem rede</option><option>Sem sinal</option><option>No ar</option><option>Fora do ar</option>
+            </select>
+            <select id="f-unidade" aria-label="Filtrar por unidade"><option value="">Todas as unidades</option></select>
+          </div>
+        </div>
+        <div class="tabela-wrap">
+          <table id="tabela">
+            <thead><tr>
+              <th data-ord="colaborador">Colaborador</th><th data-ord="host">Máquina</th><th data-ord="status">Situação</th>
+              <th data-ord="unidade">Unidade</th><th data-ord="idade_min">Visto há</th><th>Observações</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p id="vazio" class="mudo recuo" hidden>Nenhuma máquina encontrada.</p>
+      </div>
+      <div class="painel">
+        <div class="painel-topo"><h2>Últimos 14 dias</h2><span class="mudo">máquinas por situação (resultado mais frequente do dia)</span></div>
+        <div id="grafico" class="grafico"></div>
+        <div id="legenda" class="legenda"></div>
+      </div>
+    </section>
+
+    <!-- ===== BI ===== -->
+    <section id="aba-bi" class="aba" hidden>
+      <div class="bi-filtros">
+        <div id="bi-periodo"></div>
+        <div class="bi-linha2">
+          <div class="busca-wrap"><input id="bi-busca" type="search" placeholder="Buscar colaborador (nome ou login)" aria-label="Buscar colaborador" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="bi-sugestoes"><ul id="bi-sugestoes" class="sugestoes" role="listbox" aria-label="Colaboradores encontrados" hidden></ul></div>
+          <button id="bi-limpar" class="btn" type="button" hidden>Limpar busca</button>
+          <span id="bi-resumo" class="mudo" aria-live="polite"></span>
+          <details id="bi-exportar" class="menu-exportar">
+            <summary class="btn primario">Exportar</summary>
+            <div class="menu-lista">
+              <a id="bi-xlsx" href="#" download title="Resumo, dia a dia, localização (e acessos, para administradores) em um arquivo Excel"><b>Relatório completo (Excel)</b><small>Resumo, dia a dia e localização do período</small></a>
+              <a id="bi-csv-presenca" href="#" download><b>Localização (CSV)</b><small>Presencial, remoto e parcial por dia</small></a>
+              <a id="bi-csv-prod" href="#" download><b>Produtividade (CSV)</b><small>Tempo produtivo, neutro e improdutivo</small></a>
+              <a id="bi-csv-comparativo" href="#" download data-admin hidden><b>Home × Presencial (CSV)</b><small>Comparativo por colaborador (só administradores)</small></a>
+              <button id="bi-imprimir" type="button"><b>Imprimir / PDF</b><small>Esta tela do jeito que está</small></button>
+            </div>
+          </details>
+        </div>
+      </div>
+      <div id="bi-kpis" class="cartoes"></div>
+      <div id="bi-kpi-detalhe" class="painel" hidden></div>
+      <div class="grade-2">
+        <div class="painel">
+          <div class="painel-topo"><h2>Produtividade por colaborador</h2>
+            <select id="bi-ordem" aria-label="Ordenar"><option value="nome">Ordem alfabética</option><option value="prod">Mais produtivos primeiro</option><option value="improd">Mais improdutivos primeiro</option><option value="tempo">Maior tempo de navegação</option></select>
+          </div>
+          <div id="bi-prod" class="lista-barras"></div>
+          <div class="legenda" id="bi-leg-prod"></div>
+        </div>
+        <div class="painel">
+          <div class="painel-topo"><h2>Localização por colaborador</h2><span class="mudo">dias úteis do período</span></div>
+          <div id="bi-local" class="lista-barras"></div>
+          <div class="legenda" id="bi-leg-local"></div>
+        </div>
+      </div>
+      <div class="painel" id="bi-home" data-admin hidden>
+        <div class="painel-topo">
+          <h2>Home × Presencial</h2>
+          <div class="home-topo-dir">
+            <span class="mudo" id="bi-home-sub"></span>
+            <label class="home-min">Mínimo de dias em cada modo <select id="bi-home-min" aria-label="Mínimo de dias em cada modo"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>10</option></select></label>
+          </div>
+        </div>
+        <div class="recuo">
+          <div id="bi-home-geral" class="cartoes home-geral"></div>
+          <div id="bi-home-vazio" class="home-vazio" hidden></div>
+          <div class="tabela-wrap">
+            <table id="bi-home-tabela" class="tabela" hidden>
+              <thead><tr><th>Colaborador</th><th title="Dias no escritório · dias de home">Dias (escritório · home)</th><th>% produtivo escritório</th><th>% produtivo home</th><th>Diferença</th><th>Produtivo/dia escritório</th><th>Produtivo/dia home</th><th>Diferença</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <details id="bi-home-fora" class="home-fora" hidden>
+            <summary></summary>
+            <div class="tabela-wrap">
+              <table id="bi-home-fora-tabela" class="tabela">
+                <thead><tr><th>Colaborador</th><th>Dias no escritório</th><th>Dias de home</th><th>Situação</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </details>
+          <div id="bi-home-detalhe"></div>
+          <details id="bi-home-nota" class="home-nota">
+            <summary>Como ler este comparativo</summary>
+            <ul>
+              <li><b>Local do dia:</b> vale onde o computador ficou mais tempo. Mais leituras em casa que no escritório = dia de home (60% em casa e 40% no escritório é home).</li>
+              <li><b>Não entram:</b> dias com menos de cerca de 1 h de leituras, dias sem rede e dias que ainda não aconteceram.</li>
+              <li><b>% produtivo</b> = produtivo ÷ (produtivo + improdutivo). <b>Produtivo por dia</b> = média dos dias com uso do computador.</li>
+              <li><b>Quem entra:</b> só quem tem o mínimo de dias escolhido acima nos dois modos.</li>
+              <li><b>Cuidado:</b> mede uso do computador (sites e programas), não o resultado do trabalho. Audiências, reuniões e atendimentos presenciais não aparecem aqui.</li>
+            </ul>
+          </details>
+        </div>
+      </div>
+      <div class="grade-2">
+        <div class="painel">
+          <div class="painel-topo"><h2>Tempo de navegação por dia</h2><span class="mudo">horas, por categoria</span></div>
+          <div id="bi-dias-prod" class="grafico"></div>
+          <div class="legenda" id="bi-leg-dias"></div>
+        </div>
+        <div class="painel">
+          <div class="painel-topo"><h2>Colaboradores por dia</h2><span class="mudo">presenciais x remotos</span></div>
+          <div id="bi-dias-local" class="grafico"></div>
+          <div class="legenda" id="bi-leg-dias-local"></div>
+        </div>
+      </div>
+      <div class="grade-3">
+        <div class="painel"><div class="painel-topo"><h2>Mais acessados · produtivos</h2></div><div id="bi-top-produtivo" class="lista-barras"></div></div>
+        <div class="painel"><div class="painel-topo"><h2>Mais acessados · improdutivos</h2></div><div id="bi-top-improdutivo" class="lista-barras"></div></div>
+        <div class="painel"><div class="painel-topo"><h2>Mais acessados · neutros</h2></div><div id="bi-top-neutro" class="lista-barras"></div></div>
+      </div>
+      <div class="grade-3">
+        <div class="painel"><div class="painel-topo"><h2>Programas mais usados · produtivos</h2></div><div id="bi-prog-produtivo" class="lista-barras"></div></div>
+        <div class="painel"><div class="painel-topo"><h2>Programas mais usados · improdutivos</h2></div><div id="bi-prog-improdutivo" class="lista-barras"></div></div>
+        <div class="painel"><div class="painel-topo"><h2>Programas mais usados · neutros</h2></div><div id="bi-prog-neutro" class="lista-barras"></div></div>
+      </div>
+      <div class="painel" id="bi-semregra-painel" hidden>
+        <div class="painel-topo"><h2>Sites ainda sem classificação</h2><span class="mudo">entram como “neutro” até alguém classificar</span></div>
+        <div id="bi-semregra" class="recuo"></div>
+      </div>
+    </section>
+
+    <!-- ===== Produtividade ===== -->
+    <section id="aba-produtividade" class="aba" hidden>
+      <div class="barra-ferramentas" id="prod-periodo"></div>
+      <div class="painel">
+        <div class="painel-topo"><h2>Relatório de produtividade</h2>
+          <div class="filtros"><input id="prod-busca" type="search" placeholder="Buscar colaborador" aria-label="Buscar colaborador" autocomplete="off"><a id="prod-csv" class="btn" href="#" download>Exportar CSV (Excel)</a><button id="prod-imprimir" class="btn" type="button">Imprimir / PDF</button></div>
+        </div>
+        <p class="mudo recuo">Produtivo x improdutivo pelo <strong>tempo de acesso</strong> aos sites. O % produtivo ignora os sites neutros: produtivo ÷ (produtivo + improdutivo).</p>
+        <div class="tabela-wrap"><table id="prod-tabela"><thead><tr>
+          <th>Colaborador</th><th class="num">Produtivo</th><th class="num">Improdutivo</th><th class="num">Neutro</th><th class="num">Total</th><th>Produtivo x improdutivo</th><th class="num">% produtivo</th>
+        </tr></thead><tbody></tbody><tfoot></tfoot></table></div>
+        <p id="prod-vazio" class="mudo recuo" hidden>Nenhum acesso registrado no período.</p>
+      </div>
+    </section>
+
+    <!-- ===== Inventário ===== -->
+    <section id="aba-inventario" class="aba" hidden>
+      <div id="inv-cartoes" class="cartoes" aria-label="Resumo do inventário"></div>
+      <div class="painel">
+        <div class="painel-topo">
+          <h2>Ativos</h2>
+          <span id="inv-contagem" class="mudo"></span>
+        </div>
+        <div class="inv-filtros recuo">
+          <div class="inv-linha-chips"><span class="mudo inv-rotulo">Tipo</span><div id="inv-chips-tipo" class="inv-chips" role="group" aria-label="Filtrar por tipo"></div></div>
+          <div class="inv-linha-chips"><span class="mudo inv-rotulo">Status</span><div id="inv-chips-status" class="inv-chips" role="group" aria-label="Filtrar por status"></div></div>
+          <div class="inv-selects">
+            <input id="inv-busca" type="search" placeholder="Buscar (inventário, série, modelo, usuário, IP…)" aria-label="Buscar ativo" autocomplete="off">
+            <select id="inv-f-local" aria-label="Localização"></select>
+            <select id="inv-f-fab" aria-label="Fabricante"></select>
+            <select id="inv-f-modelo" aria-label="Modelo"></select>
+            <select id="inv-f-so" aria-label="Versão do Windows"></select>
+            <select id="inv-f-ram" aria-label="Memória">
+              <option value="">Qualquer memória</option><option value="le4">Até 4 GB</option><option value="8">8 GB</option><option value="16">16 GB</option>
+              <option value="ge32">32 GB ou mais</option><option value="sem">Sem dado de memória</option>
+            </select>
+            <select id="inv-f-disco" aria-label="Armazenamento">
+              <option value="">Qualquer armazenamento</option><option value="ssd">SSD ou NVMe</option><option value="nvme">Só NVMe</option><option value="hdd">Com HDD</option><option value="sem">Sem dado de disco</option>
+            </select>
+            <select id="inv-f-foco" aria-label="Agente">
+              <option value="">Com ou sem agente</option><option value="agente">Com agente</option><option value="sem-agente">Sem agente</option>
+              <option value="sem-contato">Sem contato há +7 dias</option><option value="sem-cadastro">Agente sem cadastro</option>
+            </select>
+            <button id="inv-limpar" class="btn pequeno" type="button">Limpar filtros</button>
+          </div>
+        </div>
+        <div class="barra-ferramentas recuo">
+          <a id="inv-csv-filtro" class="btn primario" href="#" download title="Baixa só o que está filtrado na tela, no modelo do Relatório de Ativos">Exportar o que está filtrado (CSV)</a>
+          <a id="inv-csv" class="btn" href="#" download title="Todos os ativos, no modelo do Relatório de Ativos, com as colunas do agente no fim">Exportar tudo (CSV)</a>
+          <a id="inv-xlsx" class="btn" href="#" download>Exportar tudo (Excel)</a>
+          <button id="inv-importar" class="btn" type="button" data-inv-admin hidden>Importar CSV</button>
+          <button id="inv-novo" class="btn" type="button" data-inv-admin hidden>Novo ativo</button>
+          <input id="inv-arquivo" type="file" accept=".csv,text/csv" hidden>
+        </div>
+        <table id="inv-tabela" class="inv-compacta">
+          <thead><tr>
+            <th data-ord="chave">Inventário</th><th data-ord="equip">Equipamento</th><th data-ord="status">Status</th><th data-ord="resp">Responsável / localização</th>
+            <th data-ord="sistema">Windows · memória · disco</th><th data-ord="rede">Rede</th><th data-ord="contato">Último contato</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== Classificação ===== -->
+    <section id="aba-classificacao" class="aba" hidden>
+      <div class="painel">
+        <div class="painel-topo"><h2>Sites sem classificação</h2><span class="mudo">últimos 30 dias, mais acessados primeiro</span></div>
+        <div id="cl-auto" class="form-linha recuo" hidden>
+          <button class="btn primario" type="button" id="cl-auto-btn" title="Classifica sozinho os sites e programas que o sistema reconhece; o resto fica na lista para você decidir">Classificar automaticamente</button>
+          <label class="mudo"><input id="cl-auto-novos" type="checkbox"> classificar sozinho os sites novos</label>
+          <button class="btn" type="button" id="cl-auto-desfazer" title="Remove só as regras criadas automaticamente (as suas ficam)">Desfazer as automáticas</button>
+        </div>
+        <p id="cl-auto-msg" class="mudo recuo" hidden></p>
+        <div id="cl-pendentes" class="recuo"></div>
+      </div>
+      <div class="painel">
+        <div class="painel-topo"><h2>Programas sem classificação</h2><span class="mudo">últimos 30 dias · navegadores ficam de fora (valem os sites)</span></div>
+        <div id="cl-prog-pendentes" class="recuo"></div>
+      </div>
+      <div class="painel" id="cl-nova-painel">
+        <div class="painel-topo"><h2>Nova regra</h2></div>
+        <form id="cl-form" class="form-linha recuo">
+          <input id="cl-dominio" type="text" placeholder="ex.: youtube.com (vale para os subdomínios)" required aria-label="Domínio">
+          <select id="cl-cat" aria-label="Categoria"><option value="produtivo">Produtivo</option><option value="improdutivo">Improdutivo</option><option value="neutro">Neutro</option></select>
+          <button class="btn primario" type="submit">Salvar regra</button>
+        </form>
+      </div>
+      <div class="grade-3" id="cl-listas"></div>
+    </section>
+
+    <!-- ===== Acesso remoto ===== -->
+    <section id="aba-remoto" class="aba" hidden>
+      <div id="rm-cartoes" class="cartoes" aria-label="Resumo do acesso remoto"></div>
+      <div class="painel">
+        <div class="painel-topo"><h2>Máquinas</h2><span id="rm-contagem" class="mudo"></span></div>
+        <div class="barra-ferramentas recuo">
+          <input id="rm-busca" type="search" placeholder="Buscar máquina, usuário ou ID…" aria-label="Buscar máquina" autocomplete="off">
+          <label class="mudo"><input id="rm-online" type="checkbox"> só as que estão online agora</label>
+          <button id="rm-atualizar" class="btn pequeno" type="button">Atualizar</button>
+          <span id="rm-atualizado" class="mudo"></span>
+        </div>
+        <p id="rm-msg" class="mudo recuo" hidden></p>
+        <div class="tabela-wrap"><table id="rm-tabela">
+          <thead><tr><th>Máquina</th><th>Usuário</th><th>Situação</th><th>ID</th><th>Visto</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+      <div class="painel">
+        <div class="painel-topo"><h2>Liberação do acesso remoto</h2><span id="ad-rem-resumo" class="mudo"></span></div>
+        <p class="mudo recuo">Libera o agent a instalar e configurar o RustDesk nas máquinas. Enquanto estiver desligado, nenhuma máquina é alterada. Depois de liberar, o botão "Acesso remoto" aparece no inventário das máquinas que se registrarem.</p>
+        <form id="ad-rem-form" class="form-linha recuo">
+          <select id="ad-rem-modo" aria-label="Liberação">
+            <option value="desligado">Desligado</option>
+            <option value="lista">Só as máquinas da lista</option>
+            <option value="todas">Todas as máquinas</option>
+          </select>
+          <textarea id="ad-rem-lista" rows="3" placeholder="máquinas liberadas, uma por linha (ex.: PC-TI-01)" aria-label="Máquinas liberadas" autocomplete="off"></textarea>
+          <button class="btn primario" type="submit">Salvar</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== Políticas de Instalação (admin) ===== -->
+    <section id="aba-politicas" class="aba" hidden>
+      <div class="painel" id="sw">
+        <div class="painel-topo"><h2>Políticas de instalação</h2><span class="mudo">instalar e remover programas nos PCs, com pacotes assinados</span></div>
+        <div class="recuo">
+          <p class="mudo">Cada política é um pacote — um instalador (<code>.msi</code>, <code>.exe</code>), um script (<code>.ps1</code>, <code>.cmd</code>, <code>.vbs</code>) ou um <b><code>.zip</code></b> com vários arquivos (instalador, perfil de configuração, scripts). O pacote é <b>assinado aqui no navegador</b> com a chave do atualizador: a chave não vai ao servidor e é esquecida ao fechar a aba. O agent só executa o que tem assinatura válida e o mesmo hash, como administrador do sistema e sem janela, em até 15 minutos. Com <b>aplicação automática</b>, todo PC novo que entrar (e combinar com o alvo) recebe o pacote sozinho.</p>
+          <div class="tabela-wrap"><table id="sw-tabela"><thead><tr><th>Política</th><th>Tipo</th><th>Tamanho</th><th>Aplicação</th><th>Cadastrada</th><th>Situação nos PCs</th><th></th></tr></thead><tbody></tbody></table></div>
+
+          <h3>Nova política</h3>
+          <form id="sw-form" class="sw-grade">
+            <label class="mudo">Arquivo do pacote <input id="sw-arq" type="file" aria-label="Arquivo do pacote" accept=".msi,.exe,.ps1,.cmd,.bat,.vbs,.zip"></label>
+            <label class="mudo">Nome da política <input id="sw-nome" type="text" placeholder="ex.: OpenVPN Client + perfil do escritório" maxlength="120" autocomplete="off"></label>
+            <label class="mudo sw-larga">Descrição <input id="sw-desc" type="text" placeholder="para que serve e quem recebe" maxlength="300" autocomplete="off"></label>
+            <label class="mudo">Nome do software <input id="sw-soft" type="text" placeholder="como aparece em Programas e Recursos" maxlength="120" autocomplete="off"></label>
+            <label class="mudo" id="sw-l-exe" hidden>Arquivo a executar dentro do zip <select id="sw-exe" aria-label="Arquivo a executar dentro do zip"></select></label>
+            <label class="mudo">Parâmetros da instalação <input id="sw-args" type="text" placeholder="silenciosos, ex.: /qn /norestart" maxlength="500" autocomplete="off"></label>
+            <label class="mudo sw-larga">Arquivo gatilho (opcional) <input id="sw-gat" type="text" placeholder="[programfiles]\Programa\programa.exe — se já existir, a instalação é ignorada" maxlength="260" autocomplete="off"></label>
+            <label class="mudo">Desinstalação
+              <select id="sw-des" aria-label="Como desinstalar">
+                <option value="">sem desinstalação</option>
+                <option value="nome">pelo nome do programa (Programas e Recursos)</option>
+                <option value="msi">pelo código do produto MSI</option>
+                <option value="script">por script do pacote</option>
+              </select></label>
+            <label class="mudo" id="sw-l-desv" hidden><span id="sw-desv-rot">Nome do programa</span> <input id="sw-desv" type="text" maxlength="240" autocomplete="off"></label>
+            <label class="mudo" id="sw-l-desa" hidden>Parâmetros da desinstalação <input id="sw-desa" type="text" placeholder="silenciosos, ex.: /qn /norestart" maxlength="500" autocomplete="off"></label>
+            <label class="mudo sw-larga">Chave de assinatura <input id="sw-chave" type="file" aria-label="Arquivo da chave privada do atualizador" accept=".xml"></label>
+            <p class="sw-larga"><button class="btn primario" type="submit">Assinar e cadastrar</button></p>
+          </form>
+          <p class="mudo"><span id="sw-chave-estado"></span> <button class="btn pequeno" type="button" id="sw-chave-esquecer" hidden>Esquecer chave</button></p>
+          <p id="sw-msg" class="mudo" role="status"></p>
+
+          <div id="sw-pol" class="recuo" hidden>
+            <h3 id="sw-pol-titulo"></h3>
+            <p class="mudo">Com a aplicação automática, o servidor cria a instalação para cada PC que ainda não a tem (e refaz até 3 vezes, com 6 h de intervalo, se falhar). Servidores marcados no painel ficam de fora. A política não é assinada: ela só decide <i>quando</i> este pacote já assinado roda.</p>
+            <p class="form-linha"><label class="mudo"><input id="sw-pol-auto" type="checkbox"> aplicar automaticamente</label>
+              <input id="sw-pol-alvo" type="text" placeholder="máquinas (vazio = todas), ex.: MTZ*, NOTE-?" aria-label="Máquinas alvo" maxlength="200" autocomplete="off">
+              <button class="btn primario" type="button" id="sw-pol-salvar">Salvar</button><button class="btn" type="button" id="sw-pol-fechar">Fechar</button><span class="mudo" id="sw-pol-msg" role="status"></span></p>
+          </div>
+
+          <div id="sw-alvo" class="recuo" hidden>
+            <h3 id="sw-alvo-titulo"></h3>
+            <p class="form-linha"><input id="sw-filtro" type="search" placeholder="filtrar máquinas" aria-label="Filtrar máquinas" autocomplete="off">
+              <button class="btn pequeno" type="button" id="sw-marcar">Marcar as visíveis</button>
+              <button class="btn pequeno" type="button" id="sw-limpar">Limpar</button></p>
+            <div id="sw-maquinas" class="lista-marcar"></div>
+            <p class="form-linha"><button class="btn primario" type="button" id="sw-instalar">Aplicar nas marcadas</button><button class="btn" type="button" id="sw-fechar">Fechar</button><span class="mudo" id="sw-alvo-msg" role="status"></span></p>
+          </div>
+
+          <h3>Tarefas recentes</h3>
+          <div class="tabela-wrap"><table id="sw-tarefas"><thead><tr><th>Máquina</th><th>Política</th><th>Ação</th><th>Situação</th><th>Quando</th><th>Resultado</th><th></th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Relatório de produtividade (admin) ===== -->
+    <section id="aba-relatorio" class="aba" hidden>
+      <div class="painel rel-controles">
+        <div class="painel-topo"><h2>Relatório de produtividade</h2><span class="mudo">calculado na hora com os dados coletados, sem extração</span></div>
+        <div class="recuo form-linha">
+          <div class="seg" id="rel-escopo" role="group" aria-label="Escopo do relatório">
+            <button type="button" class="seg-btn" data-escopo="geral" aria-pressed="true">Escritório</button>
+            <button type="button" class="seg-btn" data-escopo="individual" aria-pressed="false">Individual</button>
+          </div>
+          <label id="rel-l-colab" class="mudo" hidden>Colaborador <input type="search" id="rel-colab" list="rel-colab-lista" placeholder="digite o nome ou o login" autocomplete="off" aria-label="Colaborador do relatório individual"></label>
+          <datalist id="rel-colab-lista"></datalist>
+          <div class="seg" id="rel-tipo" role="group" aria-label="Tipo de relatório">
+            <button type="button" class="seg-btn" data-tipo="mensal" aria-pressed="true">Mensal</button>
+            <button type="button" class="seg-btn" data-tipo="semanal" aria-pressed="false">Semanal</button>
+            <button type="button" class="seg-btn" data-tipo="personalizado" aria-pressed="false">Período</button>
+          </div>
+          <label id="rel-l-mes" class="mudo">Mês <input type="month" id="rel-mes" aria-label="Mês do relatório"></label>
+          <label id="rel-l-sem" class="mudo" hidden>Semana que contém <input type="date" id="rel-data" aria-label="Data dentro da semana"> (segunda a domingo)</label>
+          <span id="rel-l-per" hidden><label class="mudo">De <input type="date" id="rel-de" aria-label="Data inicial"></label> <label class="mudo">até <input type="date" id="rel-ate" aria-label="Data final"></label></span>
+          <button class="btn primario" type="button" id="rel-gerar">Gerar</button>
+          <button class="btn" type="button" id="rel-imprimir" disabled>Imprimir / salvar PDF</button>
+        </div>
+        <p id="rel-msg" class="mudo recuo"></p>
+      </div>
+      <article id="rel-doc" class="rel-doc" hidden></article>
+    </section>
+
+    <!-- ===== Administração ===== -->
+    <section id="aba-admin" class="aba" hidden>
+      <div class="painel">
+        <div class="painel-topo"><h2>Colaboradores</h2><span class="mudo">o nome vem do Windows/AD; corrija aqui se faltar.</span></div>
+        <div class="tabela-wrap"><table id="ad-colabs"><thead><tr><th>Login</th><th>Nome completo</th><th>Setor</th><th>Cargo</th><th>Centro de custo</th><th>Ativo</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="painel" id="ad-rh">
+        <div class="painel-topo"><h2>Cadastro do RH</h2><span class="mudo">cargo e centro de custo, para o relatório mensal</span></div>
+        <div class="recuo">
+          <p class="mudo">Envie um CSV (ou Excel salvo como CSV) com uma linha por pessoa e cabeçalho. Colunas reconhecidas: <code>login</code> e/ou <code>nome</code>, <code>cargo</code> e <code>centro de custo</code>. O casamento é pelo login, ou pelo nome completo (sem diferenciar acentos e maiúsculas). Quem não for encontrado aparece na lista abaixo. Também dá para digitar cargo e centro de custo direto na tabela de colaboradores.</p>
+          <div class="form-linha">
+            <input id="ad-rh-arquivo" type="file" accept=".csv,.txt,text/csv" aria-label="Arquivo CSV do RH">
+            <button class="btn primario" type="button" id="ad-rh-importar" disabled>Importar</button>
+          </div>
+          <p id="ad-rh-previa" class="mudo"></p>
+          <div id="ad-rh-resultado"></div>
+        </div>
+      </div>
+      <div class="painel">
+        <div class="painel-topo"><h2>Servidores</h2><span class="mudo">mostram o "último usuário logado" e ficam fora das contas por colaborador</span></div>
+        <div class="tabela-wrap"><table id="ad-servidores"><thead><tr><th>Máquina</th><th>Marcada por</th><th></th></tr></thead><tbody></tbody></table></div>
+        <form id="ad-serv-form" class="form-linha recuo">
+          <input id="ad-serv-host" type="text" placeholder="nome da máquina (ex.: SRV02)" aria-label="Máquina" autocomplete="off">
+          <button class="btn" type="submit">Marcar como servidor</button>
+          <button class="btn" type="button" id="ad-serv-recalc" title="Refaz os resumos diários sem as leituras dos servidores (dias com dados brutos)">Recalcular resumos sem servidores</button>
+        </form>
+      </div>
+      <div class="painel" id="ad-api">
+        <div class="painel-topo"><h2>API de dados (analista)</h2><span class="mudo">somente leitura, com token próprio</span></div>
+        <div class="recuo">
+          <p class="mudo">O analista consulta <code id="ad-api-url"></code> enviando o cabeçalho <code>Authorization: Bearer &lt;token&gt;</code>. Rotas: <code>saude</code>, <code>colaboradores</code>, <code>dias</code>, <code>resumo</code>, <code>mensal</code> e <code>openapi.json</code> (a descrição completa). Cada consulta fica na auditoria. O token aparece <b>uma única vez</b>, ao criar: só uma impressão digital dele (hash) fica guardada.</p>
+          <div id="ad-api-novo" class="aviso-token" hidden>
+            <b>Token criado. Copie agora, ele não será mostrado de novo:</b>
+            <div class="linha-token"><code id="ad-api-valor"></code><button class="btn pequeno" type="button" id="ad-api-copiar">Copiar</button></div>
+          </div>
+        </div>
+        <div class="tabela-wrap"><table id="ad-api-tabela"><thead><tr><th>Nome</th><th>Início do token</th><th>Criado</th><th>Validade</th><th>Último uso</th><th>Usos</th><th>Situação</th><th></th></tr></thead><tbody></tbody></table></div>
+        <form id="ad-api-form" class="form-linha recuo">
+          <input id="ad-api-nome" type="text" placeholder="nome (ex.: Analista de dados)" aria-label="Nome do token" maxlength="60" autocomplete="off">
+          <label class="mudo">Validade <select id="ad-api-validade" aria-label="Validade do token"><option value="30">30 dias</option><option value="90" selected>90 dias</option><option value="180">180 dias</option><option value="365">1 ano</option><option value="0">sem validade</option></select></label>
+          <label class="mudo"><input id="ad-api-anonimo" type="checkbox"> ocultar nomes e logins (códigos no lugar)</label>
+          <button class="btn primario" type="submit">Criar token</button>
+        </form>
+      </div>
+      <div class="painel" id="ad-al">
+        <div class="painel-topo"><h2>Alertas por e-mail</h2><span class="mudo">queda de envio e falhas de login</span></div>
+        <div class="recuo">
+          <p class="mudo">O servidor avisa por e-mail quando, em horário de expediente (seg a sex, 9h às 18h), menos da metade dos PCs que vinham enviando continua enviando, e quando alguém erra o login várias vezes em sequência. Cada tipo de aviso respeita um intervalo mínimo (sem spam) e nunca leva senha no texto. Para avisar também quando o <b>servidor inteiro</b> cair, use um verificador externo gratuito (por exemplo, o UptimeRobot) apontando para <code id="ad-al-health"></code>: cada verificação também dispara a checagem de queda.</p>
+          <form id="ad-al-form" class="form-linha">
+            <input id="ad-al-email" type="email" placeholder="e-mail que recebe os alertas" aria-label="E-mail dos alertas" maxlength="120" autocomplete="off">
+            <label class="mudo"><input id="ad-al-ativo" type="checkbox"> alertas ligados</label>
+            <button class="btn primario" type="submit">Salvar</button>
+            <button class="btn" type="button" id="ad-al-teste">Enviar e-mail de teste</button>
+          </form>
+          <p id="ad-al-msg" class="mudo" role="status"></p>
+        </div>
+      </div>
+      <div class="painel" id="ad-bk">
+        <div class="painel-topo"><h2>Backup do banco</h2><span class="mudo">instantâneo diário, baixado pelo PC</span></div>
+        <div class="recuo">
+          <p class="mudo">O servidor gera sozinho, no primeiro envio do dia, uma cópia consistente do banco em uma pasta fechada. O atalho <b>9 - Backup do Servidor</b>, no PC de administração, baixa a cópia com as chaves, confere, comprime e <b>apaga a cópia do servidor</b>: o disco da hospedagem não acumula histórico.</p>
+          <p id="ad-bk-resumo"></p>
+          <p class="form-linha"><button class="btn" type="button" id="ad-bk-gerar">Gerar cópia agora</button></p>
+        </div>
+      </div>
+      <div class="painel" id="ad-tk">
+        <div class="painel-topo"><h2>Segurança dos agents</h2><span class="mudo">token próprio por máquina</span></div>
+        <div class="recuo">
+          <p class="mudo">Cada PC troca o token do instalador por um token que só vale para ele (a troca é automática, a partir do agent 1.5.0). Quando <b>todas</b> as máquinas ativas aparecerem como trocadas, desligue o token de cadastro para envio.</p>
+          <p id="ad-tk-resumo"></p>
+          <p class="form-linha"><button class="btn" type="button" id="ad-tk-alternar"></button><span class="mudo" id="ad-tk-dica"></span></p>
+          <div class="tabela-wrap"><table id="ad-tk-tabela"><thead><tr><th>Máquina sem token próprio</th><th>Agent</th><th>Último sinal</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div class="painel">
+        <div class="painel-topo"><h2>Máquinas ocultas</h2><span class="mudo">para ocultar uma máquina, abra-a em “Presença agora”</span></div>
+        <div class="tabela-wrap"><table id="ad-ocultas"><thead><tr><th>Máquina</th><th>Ocultada em</th><th>Por</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>      <div class="painel">
+        <div class="painel-topo"><h2>Usuários do painel</h2></div>
+        <div class="tabela-wrap"><table id="ad-usuarios"><thead><tr><th>Login</th><th>Nome</th><th>Perfil</th><th>2FA</th><th>Situação</th><th>Último acesso</th><th></th></tr></thead><tbody></tbody></table></div>
+        <form id="ad-form" class="form-linha recuo">
+          <input id="ad-login" type="text" placeholder="login" required aria-label="Login" autocomplete="off">
+          <input id="ad-nome" type="text" placeholder="nome" aria-label="Nome" autocomplete="off">
+          <input id="ad-senha" type="password" placeholder="senha (mín. 12)" required minlength="12" aria-label="Senha" autocomplete="new-password">
+          <select id="ad-papel" aria-label="Perfil"><option value="gestor">Gestor (só consulta)</option><option value="admin">Administrador</option></select>
+          <button class="btn primario" type="submit">Criar usuário</button>
+        </form>
+      </div>
+      <div class="painel">
+        <div class="painel-topo"><h2>Auditoria</h2>
+          <div class="filtros"><select id="au-evento" aria-label="Filtrar evento"><option value="">Todos os eventos</option><option value="login_ok">Entradas</option><option value="login_falha">Falhas de login</option><option value="login_bloqueado_ip">IP bloqueado</option><option value="login_bloqueado">Conta bloqueada</option><option value="agente_atualizado">Atualizações do agente</option><option value="regras_automaticas">Classificação automática aplicada</option><option value="regras_automaticas_desfeitas">Classificação automática desfeita</option><option value="acesso_remoto">Acesso remoto (senha consultada)</option><option value="remoto_registrado">Acesso remoto registrado</option><option value="remoto_config">Acesso remoto: liberação</option><option value="exportacao">Exportações</option><option value="regra_salva">Regras salvas</option><option value="usuario_criado">Usuários criados</option><option value="usuario_alterado">Usuários alterados</option><option value="2fa_ativado">2FA ativado</option><option value="2fa_resetado">2FA resetado</option></select></div>
+        </div>
+        <p class="mudo recuo">Últimos 200 eventos. Seu IP atual: <strong id="au-meu-ip"></strong>. Senhas e códigos nunca são gravados.</p>
+        <div class="tabela-wrap"><table id="au-tabela"><thead><tr><th>Quando</th><th>Usuário</th><th>IP</th><th>Evento</th><th>Detalhe</th></tr></thead><tbody></tbody></table></div>
+      </div>      <div class="painel">
+        <div class="painel-topo"><h2>Recomeçar do zero</h2><span class="mudo">apaga as leituras de presença e os sites; mantém usuários do painel e regras</span></div>
+        <form id="ad-zerar" class="form-linha recuo">
+          <label class="mudo"><input id="ad-zerar-colab" type="checkbox"> apagar também o cadastro de colaboradores (nomes e setores)</label>
+          <input id="ad-zerar-conf" type="text" placeholder="digite ZERAR" aria-label="Confirmação" autocomplete="off">
+          <button class="btn" type="submit">Apagar leituras</button>
+        </form>
+      </div>
+      <div class="painel">
+        <div class="painel-topo"><h2>Exportar dados completos (CSV)</h2></div>
+        <div class="recuo"><p class="mudo">Sem limite de linhas, para o BI e para guardar o histórico: sites acessados, programas em uso e leituras de localização (com IP de saída). Escolha o período e baixe. O Excel (Painel BI → Relatório completo) tem o resumo pronto.</p>
+          <div class="barra-ferramentas" id="ad-periodo"></div>
+          <a id="ad-nav-csv" class="btn" href="#" download>Acessos a sites (CSV)</a>
+          <a id="ad-foco-csv" class="btn" href="#" download>Programas em uso (CSV)</a>
+          <a id="ad-leit-csv" class="btn" href="#" download>Leituras de localização (CSV)</a></div>
+      </div>
+    </section>
+  </main>
+    </div>
+  </div>
+
+  <div id="gaveta-fundo" class="gaveta-fundo" hidden></div>
+  <aside id="gaveta" class="gaveta" hidden aria-label="Detalhes">
+    <div class="gaveta-topo">
+      <div><h3 id="g-titulo"></h3><p id="g-sub" class="mudo"></p></div>
+      <button id="g-fechar" class="btn" type="button">Fechar</button>
+    </div>
+    <div id="g-corpo"></div>
+  </aside>
+
+  <dialog id="dlg-2fa"><div id="d2-corpo" class="dlg"></div></dialog>
+
+  <dialog id="dlg-senha">
+    <form id="form-senha" method="dialog" class="dlg">
+      <h3>Trocar minha senha</h3>
+      <label>Senha atual <input id="sn-atual" type="password" autocomplete="current-password" required></label>
+      <label>Nova senha (mín. 12) <input id="sn-nova" type="password" autocomplete="new-password" required minlength="12"></label>
+      <p id="sn-erro" class="erro" role="alert" hidden></p>
+      <div class="dlg-acoes"><button class="btn" type="button" id="sn-cancelar">Cancelar</button><button class="btn primario" type="submit">Salvar</button></div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script src="bi.js"></script>
+  <script src="relatorios.js"></script>
+  <script src="relatorio.js"></script>
+  <script src="admin.js"></script>
+  <script src="software.js"></script>
+  <script src="inventario.js"></script>
+  <script src="remoto.js"></script>
+  <script src="qrcode.js"></script>
+  <script src="seguranca.js"></script>
+  <script src="iniciar.js"></script>
+</body>
+</html>

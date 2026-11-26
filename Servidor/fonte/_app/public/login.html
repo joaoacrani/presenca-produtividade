@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · Presença e Produtividade</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="pagina-login">
+  <main class="login-caixa">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="logo-claro.png">
+      <img class="logo-login" src="logo.png" alt="Presença e Produtividade" width="260" height="119">
+    </picture>
+    <h1>Presença e Produtividade</h1>
+    <p class="sub">Acesso restrito à gestão</p>
+    <form id="form" autocomplete="on">
+      <label for="login">Usuário</label>
+      <input id="login" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+      <label for="senha">Senha</label>
+      <input id="senha" name="password" type="password" autocomplete="current-password" required>
+      <div id="bloco-2fa" hidden>
+        <label for="codigo">Código de verificação</label>
+        <input id="codigo" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="20" spellcheck="false">
+        <p class="mudo pequeno">Digite o código de 6 dígitos do aplicativo autenticador (ou um código de recuperação).</p>
+      </div>
+      <p id="erro" class="erro" role="alert" hidden></p>
+      <button id="entrar" class="btn primario" type="submit">Entrar</button>
+    </form>
+    <p class="mudo pequeno">Os dados exibidos referem-se aos computadores de trabalho da empresa.</p>
+  </main>
+  <script src="login.js"></script>
+</body>
+</html>
