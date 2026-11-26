@@ -15,7 +15,7 @@ const MAX_CORPO_IMPORT = 4194304; // CSV de importacao do inventario
 const VERSAO = '2.0';
 
 $appDir = __DIR__ . '/_app';
-foreach (['util', 'classificacao', 'db', 'totp', 'auth', 'relatorios', 'xlsx', 'exportacao', 'exportacao_foco', 'exportacao_csv', 'resumos', 'inventario', 'remoto', 'sugestoes', 'batimento', 'comparativo', 'api_v1', 'rh', 'relatorio_mensal', 'backup', 'alertas', 'relatorio_individual', 'software'] as $m) require_once $appDir . '/lib/' . $m . '.php';
+foreach (['util', 'classificacao', 'db', 'totp', 'auth', 'relatorios', 'xlsx', 'exportacao', 'exportacao_foco', 'exportacao_csv', 'resumos', 'inventario', 'remoto', 'sugestoes', 'batimento', 'comparativo', 'api_v1', 'rh', 'relatorio_mensal', 'backup', 'alertas', 'relatorio_individual', 'software', 'chamados'] as $m) require_once $appDir . '/lib/' . $m . '.php';
 
 function cfgPadrao($appDir)
 {
@@ -825,9 +825,46 @@ try {
         responderJson(200, detalheColaborador($db, $cfg, $login, $de, $ate, $agora));
     }
 
+    // --- Chamados do HelpDesk (TomTicket): as linhas do .xlsx sao lidas no navegador e enviadas aqui; relatorio calculado na hora (admin) ---
+    if ($rota === '/api/chamados/resumo' && $metodo === 'GET') {
+        $exigirAdmin();
+        responderJson(200, chamadosResumoBanco($db));
+    }
+    if ($rota === '/api/chamados/importar' && $metodo === 'POST') {
+        $exigirAdmin();
+        $j = corpoJson(1048576);
+        if (!isset($j['linhas']) || !is_array($j['linhas']) || count($j['linhas']) < 1) responderJson(400, ['erro' => 'nenhuma linha para importar']);
+        $r = chamadosImportar($db, $cfg, $j['linhas'], $agora);
+        $arq = isset($j['arquivo']) ? chamadosTexto($j['arquivo'], 80) : '';
+        auditar($db, $agora, $ip, $sessao['login'], 'chamados_importar', ($arq !== '' ? $arq . ': ' : '') . $r['novos'] . ' novos, ' . $r['atualizados'] . ' atualizados, ' . $r['iguais'] . ' iguais, ' . $r['invalidos'] . ' invalidos');
+        responderJson(200, $r);
+    }
+    if ($rota === '/api/chamados/relatorio' && $metodo === 'GET') {
+        $exigirAdmin();
+        list($de, $ate) = periodoDe($_GET, $cfg, $agora, 30);
+        $base = isset($_GET['base']) && $_GET['base'] === 'criacao' ? 'criacao' : 'finalizacao';
+        responderJson(200, chamadosRelatorio($db, $cfg, $de, $ate, $base, $agora));
+    }
+
     // --- exportacoes CSV ---
     if (strncmp($rota, '/api/export/', 12) === 0 && $metodo === 'GET') {
         $tipo = substr($rota, 12);
+        // Chamados do HelpDesk em Excel (admin): indicadores, por categoria, por atendente, solicitantes e a lista do periodo
+        if ($tipo === 'chamados.xlsx') {
+            $exigirAdmin();
+            list($de, $ate) = periodoDe($_GET, $cfg, $agora, 30);
+            $base = isset($_GET['base']) && $_GET['base'] === 'criacao' ? 'criacao' : 'finalizacao';
+            auditar($db, $agora, $ip, $sessao['login'], 'exportacao', 'chamados.xlsx ' . $de . ' a ' . $ate);
+            @set_time_limit(120);
+            $bin = gerarXlsx(chamadosAbasXlsx($db, $cfg, $de, $ate, $base, $agora), fusoDe($cfg)->getOffset(new DateTime('@' . intdiv($agora, 1000))));
+            http_response_code(200);
+            cabecalhosBase();
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Disposition: attachment; filename="chamados_' . $de . '_a_' . $ate . '.xlsx"');
+            header('Content-Length: ' . strlen($bin));
+            echo $bin;
+            exit;
+        }
         // Inventario no modelo do "Relatorio de Ativos" (CSV) ou em Excel (com o historico de alteracoes de hardware)
         if ($tipo === 'inventario.csv' || $tipo === 'inventario.xlsx') {
             auditar($db, $agora, $ip, $sessao['login'], 'exportacao', $tipo);

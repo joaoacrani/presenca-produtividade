@@ -81,7 +81,7 @@ function metaSet(PDO $db, $k, $v)
     $db->prepare('INSERT OR REPLACE INTO meta (chave, valor) VALUES (?, ?)')->execute([$k, $v]);
 }
 
-const VERSAO_BANCO = 20;  // sobe a cada tabela/coluna nova: bancos que ja estao nesta versao pulam a migracao
+const VERSAO_BANCO = 21;  // sobe a cada tabela/coluna nova: bancos que ja estao nesta versao pulam a migracao
 
 function migrar(PDO $db, $cfg)
 {
@@ -246,6 +246,14 @@ function migrar(PDO $db, $cfg)
     if (!colunaExiste($db, 'tarefas', 'acao')) $db->exec('ALTER TABLE tarefas ADD COLUMN acao TEXT NOT NULL DEFAULT \'instalar\'');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_tarefas_host ON tarefas (host, estado)');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_tarefas_pid ON tarefas (pid, estado)');
+    // v21: chamados do HelpDesk (TomTicket). Sem o texto da mensagem, de proposito (privacidade). A chave e o protocolo.
+    $db->exec("CREATE TABLE IF NOT EXISTS chamados (
+        protocolo INTEGER PRIMARY KEY, assunto TEXT NOT NULL DEFAULT '', departamento TEXT NOT NULL DEFAULT '', atendente TEXT NOT NULL DEFAULT '',
+        finalizador TEXT NOT NULL DEFAULT '', cliente TEXT NOT NULL DEFAULT '', categoria TEXT NOT NULL DEFAULT '',
+        criado_em INTEGER, finalizado_em INTEGER, importado_em INTEGER NOT NULL
+    )");
+    $db->exec('CREATE INDEX IF NOT EXISTS idx_chamados_fim ON chamados (finalizado_em)');
+    $db->exec('CREATE INDEX IF NOT EXISTS idx_chamados_cri ON chamados (criado_em)');
     // segredo do 2FA passa a ficar cifrado (mesma chave do acesso remoto); o que ja estava em texto e cifrado agora
     if (function_exists('openssl_encrypt')) {
         $cif = $db->prepare('UPDATE usuarios SET totp_secret = ? WHERE id = ?');
